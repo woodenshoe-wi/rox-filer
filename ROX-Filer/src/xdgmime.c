@@ -515,6 +515,10 @@ xdg_mime_get_mime_type_for_file (const char  *file_name,
       statbuf = &buf;
     }
 
+  /* ROX: */
+  if (statbuf->st_size == 0)
+    return XDG_MIME_TYPE_EMPTY;
+
   if (!S_ISREG (statbuf->st_mode))
     return XDG_MIME_TYPE_UNKNOWN;
 
