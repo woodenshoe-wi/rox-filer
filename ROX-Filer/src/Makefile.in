@@ -47,6 +47,7 @@ OBJECTS = abox.o action.o appinfo.o appmenu.o bind.o bookmarks.o	\
 ${PROG}: ${OBJECTS}
 	${CC} -o "${PROG}" ${OBJECTS} ${LDFLAGS}
 	mv "${PROG}" "${PLATFORM_DIR}"
+	cp Options.xml "${PLATFORM_DIR}"
 	-(cd "${PLATFORM_DIR}" && \
 	 objcopy --only-keep-debug ROX-Filer ROX-Filer.dbg && \
 	 strip ROX-Filer && \

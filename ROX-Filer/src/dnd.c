@@ -71,6 +71,11 @@ gint motion_buttons_pressed = 0;
 
 /* Static prototypes */
 static void set_xds_prop(GdkDragContext *context, const char *text);
+static void desktop_dialog_response(GtkWidget *dialog,
+                                    int       response,
+                                    XYPath    *drop_point);
+static void add_item_to_desktop(XYPath *drop_point, DesktopPrompt action_type);
+static void add_to_desktop(guchar *path, gint x, gint y);
 static void desktop_drag_data_received(GtkWidget      		*widget,
 				GdkDragContext  	*context,
 				gint            	x,
@@ -150,6 +155,7 @@ Option o_dnd_spring_open;
 static Option o_dnd_spring_delay;
 static Option o_dnd_middle_menu;
 Option o_dnd_left_menu;
+Option o_dnd_desktop_prompt;
 static Option o_dnd_uri_handler;
 
 void dnd_init(void)
@@ -168,6 +174,7 @@ void dnd_init(void)
 	option_add_int(&o_dnd_spring_delay, "dnd_spring_delay", 400);
 	option_add_int(&o_dnd_left_menu, "dnd_left_menu", TRUE);
 	option_add_int(&o_dnd_middle_menu, "dnd_middle_menu", TRUE);
+	option_add_int(&o_dnd_desktop_prompt, "dnd_desktop_prompt", 0);
 
 	option_add_string(&o_dnd_uri_handler, "dnd_uri_handler",
 			"xterm -e wget $1");
@@ -635,6 +642,189 @@ static gboolean drag_drop(GtkWidget 	  *widget,
 	return TRUE;
 }
 
+static void desktop_dialog_response(GtkWidget *dialog,
+                                    int       response,
+                                    XYPath    *drop_point)
+{
+	DesktopPrompt prompt_val = DESKTOP_PROMPT_ASK;
+
+	switch (response)
+	{
+	case GTK_RESPONSE_OK:
+#ifdef ENABLE_DESKTOP
+		if (gtk_toggle_button_get_active(
+			g_object_get_data(G_OBJECT(dialog), "desktop_radio_shortcut")))
+		{
+			prompt_val = DESKTOP_PROMPT_SHORTCUT;
+		}
+		else if (gtk_toggle_button_get_active(
+			g_object_get_data(G_OBJECT(dialog),"desktop_radio_copy")))
+		{
+			prompt_val = DESKTOP_PROMPT_COPY;
+		}
+		else if (gtk_toggle_button_get_active(
+			g_object_get_data(G_OBJECT(dialog),"desktop_radio_move")))
+		{
+			prompt_val = DESKTOP_PROMPT_MOVE;
+		}
+#else
+		prompt_val = DESKTOP_PROMPT_SHORTCUT;
+#endif
+		/* Eats drop_point */
+		add_item_to_desktop(drop_point, prompt_val);
+
+		if (gtk_toggle_button_get_active(
+			g_object_get_data(G_OBJECT(dialog), "desktop_mem_btn")))
+		{
+			gchar *tmp = g_strdup_printf("%d", prompt_val);
+			option_set("dnd_desktop_prompt", tmp);
+			g_free(tmp);
+		}
+		break;
+
+	default:
+		g_free(drop_point->path);
+		g_free(drop_point);
+		break;
+	}
+
+	gtk_widget_destroy(dialog);
+	one_less_window();
+}
+
+/* Eats drop_point */
+static void add_item_to_desktop(XYPath *drop_point, DesktopPrompt action_type)
+{
+#ifdef ENABLE_DESKTOP
+	if (action_type != DESKTOP_PROMPT_SHORTCUT)
+	{
+		struct stat info;
+		GList *src_path = g_list_append(NULL, g_strdup(drop_point->path));
+		gchar *dest_path = g_build_filename(home_dir, "Desktop", NULL);
+
+		gchar *name = g_path_get_basename(drop_point->path);
+		gchar *desktop_path = g_build_filename(dest_path, name, NULL);
+		g_free(name);
+
+		if (action_type == DESKTOP_PROMPT_COPY)
+			action_copy(src_path, dest_path, NULL, -1);
+		else if (action_type == DESKTOP_PROMPT_MOVE)
+			action_move(src_path, dest_path, NULL, -1);
+
+		g_free(dest_path);
+		destroy_glist(&src_path);
+
+		if (lstat(desktop_path, &info) == 0)
+			pinboard_pin(desktop_path, NULL,
+				drop_point->x, drop_point->y, NULL);
+
+		g_free(desktop_path);
+	}
+#endif
+
+	if (action_type == DESKTOP_PROMPT_SHORTCUT)
+		pinboard_pin(drop_point->path, NULL,
+			drop_point->x, drop_point->y, NULL);
+
+	g_free(drop_point->path);
+	g_free(drop_point);
+}
+
+
+static void add_to_desktop(guchar *path, gint x, gint y)
+{
+	GtkWidget *dialog, *button, *desktop_mem_btn;
+	XYPath *drop_point;
+
+#ifdef ENABLE_DESKTOP
+	GtkWidget *desktop_radio_shortcut;
+	GtkWidget *desktop_radio_copy;
+	GtkWidget *desktop_radio_move;
+#endif
+
+	drop_point = malloc(sizeof(XYPath));
+	drop_point->x = x;
+	drop_point->y = y;
+	drop_point->path = g_strdup(path);
+
+	if (o_dnd_desktop_prompt.int_value != DESKTOP_PROMPT_ASK)
+	{
+		/* Eats drop_point */
+		add_item_to_desktop(drop_point, o_dnd_desktop_prompt.int_value);
+		return;
+	}
+
+	dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_QUESTION,
+			GTK_BUTTONS_NONE,
+#ifdef ENABLE_DESKTOP
+			_("What do you want to do?"));
+#else
+			_("Do you want to add a shortcut\n"
+			" to this item to the pinboard?"));
+#endif
+
+#ifdef ENABLE_DESKTOP
+	desktop_radio_shortcut = gtk_radio_button_new_with_label_from_widget(
+		NULL, _("Add a shortcut to this item to the pinboard"));
+	gtk_widget_show(desktop_radio_shortcut);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox),
+		desktop_radio_shortcut, FALSE, FALSE, 0);
+	g_object_set_data(G_OBJECT(dialog), "desktop_radio_shortcut",
+		desktop_radio_shortcut);
+
+	desktop_radio_copy = gtk_radio_button_new_with_label_from_widget(
+		GTK_RADIO_BUTTON(desktop_radio_shortcut),
+		_("Copy this item to ~/Desktop directory"));
+	gtk_widget_show(desktop_radio_copy);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox),
+		desktop_radio_copy, FALSE, FALSE, 0);
+	g_object_set_data(G_OBJECT(dialog), "desktop_radio_copy",
+		desktop_radio_copy);
+
+	desktop_radio_move = gtk_radio_button_new_with_label_from_widget(
+		GTK_RADIO_BUTTON(desktop_radio_shortcut),
+		_("Move this item to ~/Desktop directory"));
+	gtk_widget_show(desktop_radio_move);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox),
+		desktop_radio_move, FALSE, FALSE, 0);
+	g_object_set_data(G_OBJECT(dialog), "desktop_radio_move",
+		desktop_radio_move);
+#endif
+
+	desktop_mem_btn = gtk_check_button_new_with_label(
+#ifdef ENABLE_DESKTOP
+			_("Perform the same action in the future"));
+#else
+			_("Do not prompt in the future"));
+#endif
+	gtk_widget_show(desktop_mem_btn);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), desktop_mem_btn,
+			FALSE, FALSE, 0);
+	g_object_set_data(G_OBJECT(dialog), "desktop_mem_btn",
+			desktop_mem_btn);
+
+	button = button_new_mixed(GTK_STOCK_YES, _("Yes"));
+	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+	gtk_dialog_add_action_widget(GTK_DIALOG(dialog), button,
+			GTK_RESPONSE_OK);
+	gtk_widget_show(button);
+
+	button = button_new_mixed(GTK_STOCK_NO, _("Cancel"));
+	GTK_WIDGET_SET_FLAGS(button, GTK_CAN_DEFAULT);
+	gtk_dialog_add_action_widget(GTK_DIALOG(dialog), button,
+			GTK_RESPONSE_CANCEL);
+	gtk_widget_show(button);
+
+	g_signal_connect(G_OBJECT(dialog), "response",
+			G_CALLBACK(desktop_dialog_response), drop_point);
+
+	gtk_dialog_set_default_response(GTK_DIALOG(dialog),
+			GTK_RESPONSE_OK);
+
+	number_of_windows++;
+	gtk_widget_show(dialog);
+}
+
 /* Called when a text/uri-list arrives */
 static void desktop_drag_data_received(GtkWidget      	*widget,
 				       GdkDragContext  	*context,
@@ -674,7 +864,7 @@ static void desktop_drag_data_received(GtkWidget      	*widget,
 		path = get_local_path((EscapedPath *) next->data);
 		if (path)
 		{
-			pinboard_pin(path, NULL, x, y, NULL);
+			add_to_desktop(path, x, y);
 			x += 64;
 			g_free(path);
 		}
