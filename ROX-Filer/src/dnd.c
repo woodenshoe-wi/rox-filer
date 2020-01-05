@@ -716,7 +716,8 @@ static void add_item_to_desktop(XYPath *drop_point, DesktopPrompt action_type)
 
 		if (lstat(desktop_path, &info) == 0)
 			pinboard_pin(desktop_path, NULL,
-				drop_point->x, drop_point->y, NULL);
+				drop_point->x > 10 ? 0 - drop_point->x : -10,
+				drop_point->y > 10 ? 0 - drop_point->y : -10, NULL);
 
 		g_free(desktop_path);
 	}
@@ -724,7 +725,8 @@ static void add_item_to_desktop(XYPath *drop_point, DesktopPrompt action_type)
 
 	if (action_type == DESKTOP_PROMPT_SHORTCUT)
 		pinboard_pin(drop_point->path, NULL,
-			drop_point->x, drop_point->y, NULL);
+			drop_point->x > 10 ? 0 - drop_point->x : -10,
+			drop_point->y > 10 ? 0 - drop_point->y : -10, NULL);
 
 	g_free(drop_point->path);
 	g_free(drop_point);
