@@ -715,9 +715,10 @@ static void add_item_to_desktop(XYPath *drop_point, DesktopPrompt action_type)
 		destroy_glist(&src_path);
 
 		if (lstat(desktop_path, &info) == 0)
-			pinboard_pin(desktop_path, NULL,
+			pinboard_pin_with_args(desktop_path, NULL,
 				drop_point->x > 10 ? 0 - drop_point->x : -10,
-				drop_point->y > 10 ? 0 - drop_point->y : -10, NULL);
+				drop_point->y > 10 ? 0 - drop_point->y : -10,
+				NULL, NULL, FALSE, TRUE);
 
 		g_free(desktop_path);
 	}
