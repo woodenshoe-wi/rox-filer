@@ -55,6 +55,14 @@
 #include "wrapped.h"
 #include "dropbox.h"
 
+#ifdef ENABLE_DESKTOP
+#include "dir.h"
+#include "fscache.h"
+
+/* ~/Desktop Directory */
+Directory *dir;
+#endif
+
 static gboolean tmp_icon_selected = FALSE;		/* When dragging */
 
 static GtkWidget *set_backdrop_dialog = NULL;
@@ -144,6 +152,9 @@ static Option o_pinboard_clamp_icons, o_pinboard_grid_step;
 static Option o_pinboard_fg_colour, o_pinboard_bg_colour;
 static Option o_pinboard_tasklist, o_forward_buttons_13;
 static Option o_iconify_start, o_iconify_dir;
+#ifdef ENABLE_DESKTOP
+static Option o_deskicon_start, o_deskicon_dir;
+#endif
 static Option o_label_font, o_pinboard_shadow_colour;
 static Option o_pinboard_shadow_labels;
 static Option o_blackbox_hack;
@@ -234,6 +245,13 @@ static void radios_changed(Radios *radios, gpointer data);
 static void update_radios(GtkWidget *dialog);
 static void pinboard_set_backdrop_box(void);
 
+#ifdef ENABLE_DESKTOP
+static void pinboard_update_icons(Directory *dir,
+                                  DirAction action,
+                                  GPtrArray *items,
+                                  void      *data);
+#endif
+
 /****************************************************************
  *			EXTERNAL INTERFACE			*
  ****************************************************************/
@@ -257,6 +275,10 @@ void pinboard_init(void)
 
 	option_add_int(&o_iconify_start, "iconify_start", CORNER_TOP_RIGHT);
 	option_add_int(&o_iconify_dir, "iconify_dir", DIR_VERT);
+#ifdef ENABLE_DESKTOP
+	option_add_int(&o_deskicon_start, "deskicon_start", CORNER_TOP_LEFT);
+	option_add_int(&o_deskicon_dir, "deskicon_dir", DIR_VERT);
+#endif
 
 	option_add_int(&o_blackbox_hack, "blackbox_hack", FALSE);
 
@@ -367,6 +389,15 @@ void pinboard_activate(const gchar *name)
 				4 + ICON_WIDTH / 2,
 				4 + ICON_HEIGHT / 2,
 				NULL);
+
+#ifdef ENABLE_DESKTOP
+	path = g_build_filename(home_dir, "Desktop", NULL);
+	dir = g_fscache_lookup(dir_cache, path);
+	g_free(path);
+
+	dir_attach(dir, (DirCallback) pinboard_update_icons, NULL);
+#endif
+
 	loading_pinboard--;
 
 	if (o_pinboard_tasklist.int_value)
@@ -2125,6 +2156,10 @@ static void pinboard_clear(void)
 
 	g_return_if_fail(current_pinboard != NULL);
 
+#ifdef ENABLE_DESKTOP
+	dir_detach(dir, (DirCallback) pinboard_update_icons, NULL);
+#endif
+
 	tasklist_set_active(FALSE);
 
 	next = current_pinboard->icons;
@@ -3037,3 +3072,104 @@ static void update_radios(GtkWidget *dialog)
 			break;
 	}
 }
+
+#ifdef ENABLE_DESKTOP
+static void pinboard_update_icons(Directory *dir,
+                                  DirAction action,
+                                  GPtrArray *items,
+                                  void      *data)
+{
+	int x = 0, y = 0;
+	gchar *desktop_path;
+
+	int	i = 0;
+	DirItem	**one_item = NULL;
+
+	g_return_if_fail(current_pinboard != NULL);
+
+	if (items)
+	{
+		i = ((GPtrArray *) items)->len;
+		one_item = (DirItem **) ((GPtrArray *) items)->pdata;
+	}
+
+/*
+ *   x: -1 means left (vertical), -2 means right (vertical),
+ *      -3 means left (horizontal), -4 means right (horizontal)
+ *   y: -1 means top, -2 means bottom
+ */
+	if (o_deskicon_start.int_value == CORNER_TOP_LEFT ||
+		o_deskicon_start.int_value == CORNER_TOP_RIGHT)
+	{
+		y = -1;
+	}
+	else
+	{
+		y = -2;
+	}
+
+	if (o_deskicon_start.int_value == CORNER_TOP_LEFT ||
+		o_deskicon_start.int_value == CORNER_BOTTOM_LEFT)
+	{
+		x = -1;
+	}
+	else if (o_deskicon_start.int_value == CORNER_TOP_RIGHT ||
+			o_deskicon_start.int_value == CORNER_BOTTOM_RIGHT)
+	{
+		x = -2;
+	}
+
+	if (o_deskicon_dir.int_value == DIR_HORZ)
+		x = x -2;
+
+
+	switch (action)
+	{
+		case DIR_ADD:
+			while (i--)
+			{
+				if (one_item[i]->leafname[0]!='.')
+				{
+					desktop_path = g_build_filename(home_dir,
+						"Desktop", one_item[i]->leafname, NULL);
+
+					pinboard_pin_with_args(desktop_path, NULL,
+						x, y, NULL, NULL, FALSE, TRUE);
+
+					g_free(desktop_path);
+				}
+			}
+			break;
+		case DIR_REMOVE:
+			while (i--)
+			{
+				desktop_path = g_build_filename(home_dir,
+					"Desktop", one_item[i]->leafname, NULL);
+
+				pinboard_remove(desktop_path, NULL);
+
+				g_free(desktop_path);
+			}
+			break;
+		case DIR_UPDATE:
+			while (i--)
+			{
+				desktop_path = g_build_filename(home_dir,
+					"Desktop", one_item[i]->leafname, NULL);
+
+				icons_may_update(desktop_path);
+
+				g_free(desktop_path);
+			}
+			break;
+		case DIR_START_SCAN:
+			break;
+		case DIR_END_SCAN:
+			break;
+		case DIR_ERROR_CHANGED:
+			break;
+		case DIR_QUEUE_INTERESTING:
+			break;
+	}
+}
+#endif
