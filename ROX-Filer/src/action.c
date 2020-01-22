@@ -2598,6 +2598,7 @@ static gboolean remove_pinned_ok(GList *paths)
 		guchar	*path = (guchar *) paths->data;
 
 #ifdef ENABLE_DESKTOP
+		null_g_free(&path_dirname);
 		path_dirname = g_path_get_dirname(path);
 		if (strcmp(desktop_path, path_dirname) != 0 && icons_require(path))
 #else
@@ -2608,15 +2609,10 @@ static gboolean remove_pinned_ok(GList *paths)
 				break;
 			ask = g_list_append(ask, path);
 		}
-#ifdef ENABLE_DESKTOP
-		null_g_free(&path_dirname);
-#endif
 	}
 
 #ifdef ENABLE_DESKTOP
-	if (path_dirname)
-		g_free(path_dirname);
-
+	g_free(path_dirname);
 	g_free(desktop_path);
 #endif
 
