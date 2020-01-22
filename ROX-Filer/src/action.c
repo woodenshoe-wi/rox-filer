@@ -2588,17 +2588,37 @@ static gboolean remove_pinned_ok(GList *paths)
 	int		i, ask_n = 0;
 	gboolean	retval;
 
+#ifdef ENABLE_DESKTOP
+	gchar *desktop_path = g_build_filename(home_dir, "Desktop", NULL);
+	gchar *path_dirname = NULL;
+#endif
+
 	for (; paths; paths = paths->next)
 	{
 		guchar	*path = (guchar *) paths->data;
 
+#ifdef ENABLE_DESKTOP
+		path_dirname = g_path_get_dirname(path);
+		if (strcmp(desktop_path, path_dirname) != 0 && icons_require(path))
+#else
 		if (icons_require(path))
+#endif
 		{
 			if (++ask_n > MAX_ASK)
 				break;
 			ask = g_list_append(ask, path);
 		}
+#ifdef ENABLE_DESKTOP
+		null_g_free(&path_dirname);
+#endif
 	}
+
+#ifdef ENABLE_DESKTOP
+	if (path_dirname)
+		g_free(path_dirname);
+
+	g_free(desktop_path);
+#endif
 
 	if (!ask)
 		return TRUE;
