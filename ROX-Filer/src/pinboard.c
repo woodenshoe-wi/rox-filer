@@ -1625,6 +1625,12 @@ static void pinboard_load_from_xml(xmlDocPtr doc)
 	int	   x, y;
 	gboolean locked;
 
+#ifdef ENABLE_DESKTOP
+	struct stat info;
+	gchar *desktop_path = g_build_filename(home_dir, "Desktop", NULL);
+	gchar *path_dirname;
+#endif
+
 	root = xmlDocGetRootElement(doc);
 
 	for (node = root->xmlChildrenNode; node; node = node->next)
@@ -1669,13 +1675,28 @@ static void pinboard_load_from_xml(xmlDocPtr doc)
 		else
 			locked = FALSE;
 
+#ifdef ENABLE_DESKTOP
+		/* Skip any icons that fail to stat whose dirname is ~/Desktop */
+		path_dirname = g_path_get_dirname(path);
+		if (strcmp(desktop_path, path_dirname) != 0 ||
+			lstat(path, &info) == 0)
+		{
+				pinboard_pin_with_args(path, label, x, y,
+					shortcut, args, locked, FALSE);
+		}
+		g_free(path_dirname);
+#else
 		pinboard_pin_with_args(path, label, x, y, shortcut, args, locked, FALSE);
+#endif
 
 		g_free(path);
 		g_free(label);
 		g_free(shortcut);
 		g_free(args);
 	}
+#ifdef ENABLE_DESKTOP
+	g_free(desktop_path);
+#endif
 }
 
 /* Called for each line in the pinboard file while loading a new board.
