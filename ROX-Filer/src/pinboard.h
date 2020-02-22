@@ -28,6 +28,10 @@ void pinboard_pin(const gchar *path, const gchar *name, int x, int y,
 void pinboard_pin_with_args(const gchar *path, const gchar *name, int x, int y,
 			   const gchar *shortcut, const char *arg, 
 			   gboolean locked, gboolean update);
+void pinboard_rename(const gchar *old_path, const gchar *new_path);
+#ifdef ENABLE_DESKTOP
+void pinboard_may_rename(const gchar *old_path, const gchar *new_path);
+#endif
 gboolean pinboard_remove(const gchar *path, const gchar *name);
 void pinboard_move_icons(void);
 const gchar *pinboard_get_name(void);

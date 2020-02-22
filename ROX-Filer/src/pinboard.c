@@ -717,6 +717,62 @@ void pinboard_pin(const gchar *path, const gchar *name, int x, int y,
 }
 
 /*
+ * This is used to update pinboard icons when the file/directory that they
+ * represent is renamed.
+ */
+void pinboard_rename(const gchar *old_path, const gchar *new_path)
+{
+	PinIcon		*pi = NULL;
+	Icon		*icon;
+	GList		*iter;
+
+	g_return_if_fail(current_pinboard != NULL);
+
+	for (iter = current_pinboard->icons; iter; iter = iter->next)
+	{
+		icon = (Icon *) iter->data;
+		if (strcmp(icon->path, old_path) == 0)
+		{
+			pi = (PinIcon *) icon;
+			break;
+		}
+	}
+	if (pi)
+	{
+		icon_set_path(icon, new_path, NULL);
+
+		pinboard_reshape_icon((Icon *) pi);
+		gtk_widget_realize(pi->win);
+
+		pin_icon_set_tip(pi);
+
+		if (!loading_pinboard)
+			pinboard_save();
+	}
+
+}
+
+#ifdef ENABLE_DESKTOP
+void pinboard_may_rename(const gchar *old_path, const gchar *new_path)
+{
+	gchar *desktop_path = NULL;
+	gchar *path_dirname = NULL;
+
+	desktop_path = g_build_filename(home_dir, "Desktop", NULL);
+	path_dirname = g_path_get_dirname(old_path);
+	if (strcmp(desktop_path, path_dirname) == 0)
+	{
+		gchar *dest_dirname = g_path_get_dirname(new_path);
+		if (strcmp(desktop_path, dest_dirname) == 0)
+			pinboard_rename(old_path, new_path);
+		g_free(dest_dirname);
+	}
+	g_free(desktop_path);
+	g_free(path_dirname);
+}
+#endif
+
+/*
  * Remove an icon from the background.  The first icon with a matching
  * path is removed.  If name is not NULL then that also must match
  */

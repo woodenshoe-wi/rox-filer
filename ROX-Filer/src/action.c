@@ -46,6 +46,9 @@
 #include "options.h"
 #include "modechange.h"
 #include "find.h"
+#ifdef ENABLE_DESKTOP
+#include "pinboard.h"
+#endif
 #include "dir.h"
 #include "icon.h"
 #include "mount.h"
@@ -2450,6 +2453,23 @@ void action_move(GList *paths, const char *dest, const char *leaf, int quiet)
 {
 	GUIside		*gui_side;
 	GtkWidget	*abox;
+
+#ifdef ENABLE_DESKTOP
+	if (leaf)
+	{
+		const char *to_path;
+		to_path = make_path(dest, leaf);
+		if (faccessat(AT_FDCWD, to_path, F_OK, AT_SYMLINK_NOFOLLOW) != 0)
+		{
+			if (rename(paths->data, to_path) == 0)
+			{
+				pinboard_may_rename(paths->data, to_path);
+
+				return; /* If the renaming was successful, nothing more to do. */
+			}
+		}
+	}
+#endif
 
 	if (quiet == -1)
 		quiet = o_action_move.int_value;
