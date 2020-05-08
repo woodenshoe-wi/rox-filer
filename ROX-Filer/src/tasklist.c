@@ -773,8 +773,7 @@ static GdkPixbuf* pixbuf_from_pixmap(Pixmap xpixmap)
 	/* GDK is supposed to do this but doesn't in GTK 2.0.2,
 	 * fixed in 2.0.3
 	 */
-	width = gdk_window_get_width(drawable);
-	height = gdk_window_get_height(drawable);
+	gdk_drawable_get_size(drawable, &width, &height);
 
 	retval = gdk_pixbuf_get_from_drawable(NULL, drawable, cmap,
 						0, 0, 0, 0, width, height);
