@@ -383,6 +383,9 @@ gboolean diritem_examine_dir(const guchar *path, DirItem *item)
 	 */
 	strcpy(inspt, "/.DirIcon");
 
+	if (item->_image)
+		goto no_diricon;	/* Already got an icon */
+
 	if (mc_lstat(pathbuf, &info) != 0 || info.st_uid != uid)
 		goto no_diricon;	/* Missing, or wrong owner */
 
@@ -412,7 +415,7 @@ no_diricon:
 
 	/* Try to load AppIcon.xpm... */
 
-	if (newimage)
+	if (item->_image || newimage)
 		goto out;	/* Already got an icon */
 
 	/* Note: since AppRun is valid we don't need to check AppIcon.xpm
@@ -437,7 +440,7 @@ out:
 	item->flags &= ~ITEM_FLAG_NEED_EXAMINE;
 	g_mutex_unlock(&m_diritems);
 
-	if ((item->flags & ITEM_FLAG_APPDIR) && !newimage)
+	if ((item->flags & ITEM_FLAG_APPDIR) && !newimage && !item->_image)
 	{
 		/* This is an application without an icon */
 		newimage = im_appdir;
