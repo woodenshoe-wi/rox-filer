@@ -381,10 +381,10 @@ gboolean diritem_examine_dir(const guchar *path, DirItem *item)
 	 * directory itself, to prevent abuse of /tmp, etc.
 	 * For symlinks, we want the symlink's owner.
 	 */
-	strcpy(inspt, "/.DirIcon");
+	if ((newimage = get_globicon(path)) || (newimage = get_globicon(pathbuf)))
+		goto no_diricon;
 
-	if (item->_image)
-		goto no_diricon;	/* Already got an icon */
+	strcpy(inspt, "/.DirIcon");
 
 	if (mc_lstat(pathbuf, &info) != 0 || info.st_uid != uid)
 		goto no_diricon;	/* Missing, or wrong owner */
@@ -401,7 +401,7 @@ gboolean diritem_examine_dir(const guchar *path, DirItem *item)
 no_diricon:
 
 	/* Try to find AppRun... */
-	strcpy(inspt + 1, /*"/"*/ "AppRun");
+	strcpy(inspt, "/AppRun");
 
 	if (mc_lstat(pathbuf, &info) != 0 || info.st_uid != uid)
 		goto out;	/* Missing, or wrong owner */
@@ -415,7 +415,7 @@ no_diricon:
 
 	/* Try to load AppIcon.xpm... */
 
-	if (item->_image || newimage)
+	if (newimage)
 		goto out;	/* Already got an icon */
 
 	/* Note: since AppRun is valid we don't need to check AppIcon.xpm
@@ -440,7 +440,7 @@ out:
 	item->flags &= ~ITEM_FLAG_NEED_EXAMINE;
 	g_mutex_unlock(&m_diritems);
 
-	if ((item->flags & ITEM_FLAG_APPDIR) && !newimage && !item->_image)
+	if ((item->flags & ITEM_FLAG_APPDIR) && !newimage)
 	{
 		/* This is an application without an icon */
 		newimage = im_appdir;
