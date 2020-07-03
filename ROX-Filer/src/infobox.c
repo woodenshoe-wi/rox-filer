@@ -250,7 +250,8 @@ static GtkWidget *make_vbox(const guchar *path, GObject *window)
 
 	make_heading(name, PANGO_SCALE_X_LARGE);
 
-	thumb=pixmap_try_thumb(path, FALSE);
+	gboolean forcheck = FALSE;
+	thumb=pixmap_try_thumb(path, &forcheck);
 	if(thumb)
 	{
 		GdkPixbuf *tmp = scale_pixbuf(thumb, 96, 96);

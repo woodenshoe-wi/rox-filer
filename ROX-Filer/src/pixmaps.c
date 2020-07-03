@@ -304,13 +304,16 @@ gint pixmap_check_thumb(const gchar *path)
 	else
 		if (found) return -2;
 
-	GdkPixbuf *image = pixmap_try_thumb(path, TRUE);
+	gboolean forcheck = TRUE;
+	GdkPixbuf *image = pixmap_try_thumb(path, &forcheck);
 
 	if (image)
 	{
 		g_object_unref(image);
 		return 1;
 	}
+	if (forcheck)
+		return -1;
 
 	MIME_type *type = type_from_path(path);
 	if (type)
@@ -380,13 +383,19 @@ void pixmap_background_thumb(const gchar *path, gboolean noorder,
 	MIME_type       *type;
 	gchar		*thumb_prog, *base;
 
-	image = pixmap_try_thumb(path, TRUE);
+	gboolean forcheck = TRUE;
+	image = pixmap_try_thumb(path, &forcheck);
 
 	if (image)
 	{
 		g_object_unref(image);
 		/* Thumbnail loaded */
 		callback(data, (gpointer)path);
+		return;
+	}
+	if (forcheck)
+	{
+		callback(data, NULL);
 		return;
 	}
 
@@ -485,7 +494,7 @@ void pixmap_background_thumb(const gchar *path, gboolean noorder,
 /*
  * Return the thumbnail for a file, only if available.
  */
-GdkPixbuf *pixmap_try_thumb(const gchar *path, gboolean forcheck)
+GdkPixbuf *pixmap_try_thumb(const gchar *path, gboolean *forcheck)
 {
 	gboolean  found;
 	GdkPixbuf *image;
@@ -503,7 +512,7 @@ GdkPixbuf *pixmap_try_thumb(const gchar *path, gboolean forcheck)
 		}
 	}
 
-	pixbuf = get_thumbnail_for(path, forcheck);
+	pixbuf = get_thumbnail_for(path, *forcheck);
 
 	if (!pixbuf)
 	{
@@ -551,6 +560,7 @@ GdkPixbuf *pixmap_try_thumb(const gchar *path, gboolean forcheck)
 		return pixbuf;
 	}
 
+	*forcheck = FALSE;
 	return NULL;
 }
 
