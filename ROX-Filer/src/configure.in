@@ -7,6 +7,21 @@ AC_CONFIG_HEADER(config.h)
 	exit 1
 fi
 
+AC_ARG_ENABLE([desktop],
+  [AS_HELP_STRING([--enable-desktop],
+    [show items in ~/Desktop directory on the pinboard.  (experimental)])],
+  [],
+  [enable_desktop=no])
+
+extra_dnd_desktop_prompts=/dev/null
+extra_desktop_icons=/dev/null
+AS_IF([test "x$enable_desktop" != xno],
+  AC_DEFINE([ENABLE_DESKTOP], [1])
+  extra_dnd_desktop_prompts=$srcdir/dnd_prompts.xml
+  extra_desktop_icons=$srcdir/desktop_icons.xml)
+AC_SUBST_FILE(extra_dnd_desktop_prompts)
+AC_SUBST_FILE(extra_desktop_icons)
+
 dnl Checks for programs.
 AC_PROG_CC
 
@@ -192,4 +207,5 @@ VERSION=`sed -n 's/^.*<Version>\([.0-9]*\).*<\/Version>.*$/\1/p' ${srcdir}/../Ap
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
 AC_MSG_RESULT(version $VERSION)
 
-AC_OUTPUT(Makefile)
+AC_CONFIG_FILES([Makefile Options.xml])
+AC_OUTPUT

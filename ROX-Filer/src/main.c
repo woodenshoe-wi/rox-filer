@@ -90,6 +90,9 @@ const gchar *show_user_message = NULL;
 
 int home_dir_len;
 const char *home_dir, *app_dir;
+#ifdef ENABLE_DESKTOP
+const char *desktop_dir;
+#endif
 
 GtkTooltips *tooltips = NULL;
 
@@ -281,6 +284,9 @@ int main(int argc, char **argv)
 	home_dir = g_get_home_dir();
 	home_dir_len = strlen(home_dir);
 	app_dir = g_strdup(getenv("APP_DIR"));
+#ifdef ENABLE_DESKTOP
+	desktop_dir = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+#endif
 
 	/* Get internationalisation up and running. This requires the
 	 * choices system, to discover the user's preferred language.

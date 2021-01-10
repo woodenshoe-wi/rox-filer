@@ -1,0 +1,2 @@
+        <radio value='2' label='Copy to ~/Desktop directory'/>
+        <radio value='3' label='Move to ~/Desktop directory'/>

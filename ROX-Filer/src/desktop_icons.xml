@@ -1,0 +1,14 @@
+      <frame label='Desktop directory icons'>
+        <hbox>
+          <menu name='deskicon_start' label='Icons start at the'>
+            <item label='top-left' value='0'/>
+            <item label='top-right' value='1'/>
+            <item label='bottom-left' value='2'/>
+            <item label='bottom-right' value='3'/>
+          </menu>
+          <menu name='deskicon_dir' label=', going'>
+            <item label='horizontally' value='0'/>
+            <item label='vertically' value='1'/>
+          </menu>
+        </hbox>
+      </frame>

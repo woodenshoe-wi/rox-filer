@@ -4,6 +4,8 @@
 #define VERSION "Unknown"
 #define GTK_VERSION "Unknown"
 
+#undef ENABLE_DESKTOP
+
 #undef STDC_HEADERS
 #undef HAVE_SYS_UCRED_H
 #undef HAVE_MNTENT_H
