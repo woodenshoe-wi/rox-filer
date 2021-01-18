@@ -45,9 +45,10 @@ OBJECTS = abox.o action.o appinfo.o appmenu.o bind.o bookmarks.o	\
 
 ############ Things to keep the same
 
-${PROG}: ${OBJECTS}
+${PROG}: ${OBJECTS} Options.xml
 	${CC} -o "${PROG}" ${OBJECTS} ${LDFLAGS}
 	mv "${PROG}" "${PLATFORM_DIR}"
+	cp Options.xml "${PLATFORM_DIR}"
 	-(cd "${PLATFORM_DIR}" && \
 	 objcopy --only-keep-debug ROX-Filer ROX-Filer.dbg && \
 #	 strip ROX-Filer && \
@@ -60,6 +61,9 @@ depend:
 	makedepend -- ${CFLAGS} -- ${SRCS}
 
 Makefile: Makefile.in config.status
+	./config.status
+
+Options.xml: Options.xml.in config.status
 	./config.status
 
 config.h: config.h.in

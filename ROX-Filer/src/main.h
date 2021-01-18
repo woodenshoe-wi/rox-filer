@@ -29,6 +29,9 @@ extern gid_t *supplemental_groups;
 extern const gchar *show_user_message;
 extern int home_dir_len;
 extern const char *home_dir, *app_dir;
+#ifdef ENABLE_DESKTOP
+extern const char *desktop_dir;
+#endif
 extern Option o_dnd_no_hostnames;
 
 /* Prototypes */

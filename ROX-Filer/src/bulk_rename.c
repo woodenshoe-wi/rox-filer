@@ -34,6 +34,9 @@
 #include "bulk_rename.h"
 #include "support.h"
 #include "gui_support.h"
+#ifdef ENABLE_DESKTOP
+#include "pinboard.h"
+#endif
 
 enum {RESPONSE_RENAME, RESPONSE_RESET};
 
@@ -387,7 +390,14 @@ static gboolean do_rename(const char *before, const char *after)
 				g_strerror(errno));
 	}
 	else
+#ifdef ENABLE_DESKTOP
+	{
+		pinboard_may_rename(before, after);
 		return TRUE;
+	}
+#else
+		return TRUE;
+#endif
 	return FALSE;
 }
 

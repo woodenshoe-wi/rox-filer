@@ -8,6 +8,22 @@
 
 #include <gtk/gtk.h>
 
+/* What to do when something is dragged to the desktop */
+typedef enum {
+	DESKTOP_PROMPT_ASK = GPOINTER_TO_INT(NULL),
+	DESKTOP_PROMPT_SHORTCUT,
+#ifdef ENABLE_DESKTOP
+	DESKTOP_PROMPT_COPY,
+	DESKTOP_PROMPT_MOVE,
+#endif
+} DesktopPrompt;
+
+typedef struct {
+	gint x;
+	gint y;
+	guchar *path;
+} XYPath;
+
 enum
 {
 	TARGET_RAW,
